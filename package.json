@@ -1,0 +1,234 @@
+{
+  "name": "code-companion",
+  "displayName": "CodeCompanion",
+  "description": "An autonomous AI pair programmer for VS Code",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Programming Languages",
+    "Snippets",
+    "Machine Learning"
+  ],
+  "keywords": [
+    "ai",
+    "coding",
+    "assistant",
+    "autocomplete",
+    "refactoring",
+    "ollama",
+    "llm"
+  ],
+  "activationEvents": [
+    "*",
+    "onView:codeCompanionChat",
+    "onView:codeCompanionTasks",
+    "onCommand:codeCompanion.startChat",
+    "onCommand:codeCompanion.refactorCode",
+    "onCommand:codeCompanion.implementFeature",
+    "onCommand:codeCompanion.fixBugs",
+    "onCommand:codeCompanion.reviewCode",
+    "onCommand:codeCompanion.showSidebar"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codeCompanion.startChat",
+        "title": "CodeCompanion: Start Chat",
+        "category": "CodeCompanion"
+      },
+      {
+        "command": "codeCompanion.refactorCode",
+        "title": "CodeCompanion: Refactor Code",
+        "category": "CodeCompanion"
+      },
+      {
+        "command": "codeCompanion.implementFeature",
+        "title": "CodeCompanion: Implement Feature",
+        "category": "CodeCompanion"
+      },
+      {
+        "command": "codeCompanion.fixBugs",
+        "title": "CodeCompanion: Fix Bugs",
+        "category": "CodeCompanion"
+      },
+      {
+        "command": "codeCompanion.reviewCode",
+        "title": "CodeCompanion: Review Code",
+        "category": "CodeCompanion"
+      },
+      {
+        "command": "codeCompanion.showSidebar",
+        "title": "CodeCompanion: Show Sidebar",
+        "category": "CodeCompanion"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codeCompanionSidebar",
+          "title": "CodeCompanion",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "codeCompanionSidebar": [
+        {
+          "id": "codeCompanionChat",
+          "type": "webview",
+          "name": "CodeCompanion Chat"
+        },
+        {
+          "id": "codeCompanionTasks",
+          "type": "webview",
+          "name": "CodeCompanion Tasks"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "CodeCompanion",
+      "properties": {
+        "codeCompanion.ollamaUrl": {
+          "type": "string",
+          "default": "http://localhost:11434",
+          "description": "Ollama server URL"
+        },
+        "codeCompanion.llmProvider": {
+          "type": "string",
+          "enum": ["ollama", "openai"],
+          "default": "ollama",
+          "description": "Which LLM backend to use for completions"
+        },
+        "codeCompanion.openaiApiKey": {
+          "type": "string",
+          "description": "OpenAI API key (if using OpenAI provider)",
+          "markdownDeprecationMessage": "Set via environment variable OPENAI_API_KEY instead of workspace settings if preferred"
+        },
+        "codeCompanion.openaiModel": {
+          "type": "string",
+          "default": "gpt-4o-mini",
+          "description": "OpenAI model name to use"
+        },
+        "codeCompanion.openaiEndpoint": {
+          "type": "string",
+          "default": "https://api.openai.com/v1",
+          "description": "Custom OpenAI-compatible endpoint (optional)"
+        },
+        "codeCompanion.defaultModel": {
+          "type": "string",
+          "default": "codellama:70b",
+          "description": "Default LLM model to use"
+        },
+        "codeCompanion.maxTokens": {
+          "type": "number",
+          "default": 4096,
+          "description": "Maximum tokens for LLM responses"
+        },
+        "codeCompanion.temperature": {
+          "type": "number",
+          "default": 0.1,
+          "description": "Temperature for LLM responses (0.0-1.0)"
+        },
+        "codeCompanion.enableAutoSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically save files after agent changes"
+        },
+        "codeCompanion.confirmChanges": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show confirmation dialog before applying changes"
+        },
+        "codeCompanion.maxConcurrentTasks": {
+          "type": "number",
+          "default": 3,
+          "description": "Maximum number of concurrent agent tasks"
+        },
+        "codeCompanion.useMergeEditor": {
+          "type": "boolean",
+          "default": false,
+          "description": "Open proposed changes in VS Code's Merge Editor instead of a plain diff preview. Gives ✔ / ✖ chunk actions and an \"Accept Merge\" flow."
+        }
+      }
+    },
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "codeCompanion.startChat",
+          "when": "true"
+        },
+        {
+          "command": "codeCompanion.refactorCode",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "codeCompanion.implementFeature",
+          "when": "true"
+        },
+        {
+          "command": "codeCompanion.fixBugs",
+          "when": "true"
+        },
+        {
+          "command": "codeCompanion.reviewCode",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "codeCompanion.showSidebar",
+          "when": "true"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "codeCompanion.refactorCode",
+          "when": "editorHasSelection",
+          "group": "1_modification"
+        },
+        {
+          "command": "codeCompanion.reviewCode",
+          "when": "editorHasSelection",
+          "group": "1_modification"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "18.x",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0",
+    "@types/diff": "^5.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "ws": "^8.14.0",
+    "node-fetch": "^3.3.0",
+    "diff": "^5.1.0",
+    "glob": "^10.3.0",
+    "chalk": "^5.3.0",
+    "@octokit/rest": "^20.0.0"
+  },
+  "publisher": "codecompanion",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/code-companion.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/code-companion/issues"
+  },
+  "homepage": "https://github.com/your-username/code-companion#readme"
+} 
