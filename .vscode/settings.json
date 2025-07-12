@@ -1,0 +1,6 @@
+{
+  "codeCompanion.ollamaUrl": "http://localhost:11434",
+  "codeCompanion.defaultModel": "codellama:7b",
+  "codeCompanion.maxTokens": 4096,
+  "codeCompanion.temperature": 0.1
+} 
