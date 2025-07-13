@@ -340,9 +340,112 @@ export class ChatPanel implements vscode.WebviewViewProvider {
             margin-bottom: 5px;
         }
 
-        .message-content {
+                .message-content {
             white-space: pre-wrap;
             line-height: 1.4;
+        }
+
+        /* Enhanced styles for code blocks */
+        .code-block {
+            position: relative;
+            background-color: var(--vscode-textCodeBlock-background, #1e1e1e);
+            border: 1px solid var(--vscode-widget-border, #464647);
+            border-radius: 6px;
+            padding: 16px;
+            margin: 12px 0;
+            overflow-x: auto;
+            font-family: var(--vscode-editor-font-family, 'Consolas', 'Monaco', 'Courier New', monospace);
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre;
+            color: var(--vscode-editor-foreground, #d4d4d4);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.16);
+        }
+
+        .code-block:hover {
+            border-color: var(--vscode-focusBorder, #007acc);
+        }
+
+        /* Scrollbar styling for code blocks */
+        .code-block::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+
+        .code-block::-webkit-scrollbar-track {
+            background: var(--vscode-scrollbarSlider-background, rgba(121, 121, 121, 0.1));
+        }
+
+        .code-block::-webkit-scrollbar-thumb {
+            background: var(--vscode-scrollbarSlider-background, rgba(121, 121, 121, 0.4));
+            border-radius: 4px;
+        }
+
+        .code-block::-webkit-scrollbar-thumb:hover {
+            background: var(--vscode-scrollbarSlider-hoverBackground, rgba(121, 121, 121, 0.7));
+        }
+        
+        /* Enhanced inline code styling */
+        .inline-code {
+            background: var(--vscode-textCodeBlock-background, rgba(255, 255, 255, 0.08));
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: var(--vscode-editor-font-family, 'Consolas', 'Monaco', 'Courier New', monospace);
+            font-size: 0.85em;
+            color: var(--vscode-textPreformat-foreground, #ce9178);
+            border: 1px solid var(--vscode-widget-border, rgba(255, 255, 255, 0.1));
+        }
+
+        /* Task result styling */
+        .message-content details {
+            margin: 8px 0;
+            padding: 8px;
+            background: var(--vscode-editor-background);
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: 4px;
+        }
+
+        .message-content summary {
+            cursor: pointer;
+            font-weight: bold;
+            padding: 4px;
+        }
+
+        .message-content summary:hover {
+            background: var(--vscode-list-hoverBackground);
+        }
+
+        .message-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+
+        .message-content table td, .message-content table th {
+            padding: 8px;
+            border: 1px solid var(--vscode-panel-border);
+            text-align: left;
+        }
+
+        .message-content table th {
+            background: var(--vscode-editor-selectionBackground);
+            font-weight: bold;
+        }
+
+        .message-content pre {
+            background-color: var(--vscode-input-background);
+            border: 1px solid var(--vscode-panel-border);
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            margin: 8px 0;
+        }
+
+        .message-content h4 {
+            margin: 12px 0 8px 0;
+            color: var(--vscode-foreground);
         }
 
         .input-container {
@@ -433,6 +536,63 @@ export class ChatPanel implements vscode.WebviewViewProvider {
         const vscode = acquireVsCodeApi();
         let isProcessing = false;
 
+        // Simple markdown processor that avoids backtick issues
+        function processMarkdown(text) {
+            if (!text || typeof text !== 'string') return '';
+            
+            // Escape HTML first
+            let processed = text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+            
+            // Replace triple backticks with code blocks
+            // Using split and join to avoid regex with backticks
+            const parts = processed.split(String.fromCharCode(96) + String.fromCharCode(96) + String.fromCharCode(96));
+            if (parts.length > 1) {
+                processed = '';
+                for (let i = 0; i < parts.length; i++) {
+                    if (i % 2 === 0) {
+                        // Regular text
+                        processed += parts[i];
+                    } else {
+                        // Code block
+                        const lines = parts[i].split('\\n');
+                        const lang = lines[0].trim() || '';
+                        const code = lines.slice(1).join('\\n').trim();
+                        if (code) {
+                            // Only show the code content, not the language identifier
+                            processed += '<div class="code-block">' + code + '</div>';
+                        } else {
+                            // If there's no code after the language, treat the whole thing as code
+                            processed += '<div class="code-block">' + parts[i].trim() + '</div>';
+                        }
+                    }
+                }
+            }
+            
+            // Replace single backticks with inline code
+            const singleBacktick = String.fromCharCode(96);
+            const inlineParts = processed.split(singleBacktick);
+            if (inlineParts.length > 1) {
+                processed = '';
+                for (let i = 0; i < inlineParts.length; i++) {
+                    if (i % 2 === 0) {
+                        processed += inlineParts[i];
+                    } else {
+                        processed += '<span class="inline-code">' + inlineParts[i] + '</span>';
+                    }
+                }
+            }
+            
+            // Convert newlines to breaks
+            processed = processed.replace(/\\n/g, '<br>');
+            
+            return processed;
+        }
+
         function sendMessage() {
             const input = document.getElementById('messageInput');
             const text = input.value.trim();
@@ -513,9 +673,21 @@ export class ChatPanel implements vscode.WebviewViewProvider {
                 const content = document.createElement('div');
                 content.className = 'message-content';
                 if (message.role === 'assistant') {
-                    content.innerHTML = message.content;
+                    // Check if it's a task result (pre-formatted HTML)
+                    // Task results contain specific markers like task status symbols and details tags
+                    if (message.content && (
+                        message.content.indexOf('✅') !== -1 || 
+                        message.content.indexOf('❌') !== -1 ||
+                        message.content.indexOf('<details') !== -1 ||
+                        message.content.indexOf('<table') !== -1
+                    )) {
+                        content.innerHTML = message.content;
+                    } else {
+                        // Process markdown for regular messages
+                        content.innerHTML = processMarkdown(message.content);
+                    }
                 } else {
-                content.textContent = message.content;
+                    content.textContent = message.content;
                 }
                 
                 messageDiv.appendChild(header);

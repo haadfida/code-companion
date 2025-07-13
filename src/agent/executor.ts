@@ -309,9 +309,39 @@ Return just the code.`;
         try {
             const config = vscode.workspace.getConfiguration('codeCompanion');
             const confirm = config.get<boolean>('confirmChanges', true);
+            const useMergeEditor = config.get<boolean>('useMergeEditor', false);
+            const inlineAgenticMode = config.get<boolean>('inlineAgenticMode', true);
 
             const existingContent = await fs.promises.readFile(filePath, 'utf8');
             const modifiedContent = `${existingContent}\n${content}`;
+
+            // If in agentic mode with inline editing enabled, apply changes directly
+            if (inlineAgenticMode) {
+                const doc = await vscode.workspace.openTextDocument(filePath);
+                const edit = new vscode.WorkspaceEdit();
+                const fullRange = new vscode.Range(
+                    doc.positionAt(0),
+                    doc.positionAt(existingContent.length)
+                );
+                edit.replace(doc.uri, fullRange, modifiedContent);
+                await vscode.workspace.applyEdit(edit);
+                
+                // Show the file so user can see the changes
+                await vscode.window.showTextDocument(doc);
+                
+                if (config.get<boolean>('enableAutoSave', true)) {
+                    await doc.save();
+                }
+                
+                return {
+                    success: true,
+                    filePath,
+                    operation: 'modified',
+                    originalLength: existingContent.length,
+                    newLength: modifiedContent.length,
+                    appliedInline: true
+                };
+            }
 
             if (confirm) {
                 // Always show diff inline without an extra prompt for better UX
@@ -330,37 +360,37 @@ Return just the code.`;
                 edit.insert(rightDoc.uri, new vscode.Position(0, 0), modifiedContent);
                 await vscode.workspace.applyEdit(edit);
 
-                const useMergeEditor = config.get<boolean>('useMergeEditor', false);
-
-                if (useMergeEditor) {
-                    // Try to open using the Merge Editor (available in VS Code 1.80+).
-                    // There is no official API yet, but opening via the `vscode.openWith` command
-                    // and the built-in `mergeEditor` view type works in current VS Code versions.
-                    // If this fails (older VS Code), we gracefully fall back to the regular two-way diff.
-                    try {
-                        await vscode.commands.executeCommand('vscode.openWith', right, 'mergeEditor', {
-                            override: true
-                        });
-                    } catch {
+                if (!inlineAgenticMode) {
+                    if (useMergeEditor) {
+                        // Try to open using the Merge Editor (available in VS Code 1.80+).
+                        // There is no official API yet, but opening via the `vscode.openWith` command
+                        // and the built-in `mergeEditor` view type works in current VS Code versions.
+                        // If this fails (older VS Code), we gracefully fall back to the regular two-way diff.
+                        try {
+                            await vscode.commands.executeCommand('vscode.openWith', right, 'mergeEditor', {
+                                override: true
+                            });
+                        } catch {
+                            await vscode.commands.executeCommand('vscode.diff', left, right, `Diff: ${path.basename(filePath)}`);
+                        }
+                    } else {
                         await vscode.commands.executeCommand('vscode.diff', left, right, `Diff: ${path.basename(filePath)}`);
                     }
-                } else {
-                    await vscode.commands.executeCommand('vscode.diff', left, right, `Diff: ${path.basename(filePath)}`);
-                }
 
-                if (!useMergeEditor) {
-                    // In diff mode we still ask for explicit confirmation so the user can decide whether to apply.
-                    const proceed = await vscode.window.showInformationMessage(
-                        'Apply the displayed changes?',
-                        { modal: true },
-                        'Yes',
-                        'No'
-                    );
-                    if (proceed !== 'Yes') {
-                        return { cancelled: true };
+                    if (!useMergeEditor) {
+                        // In diff mode we still ask for explicit confirmation so the user can decide whether to apply.
+                        const proceed = await vscode.window.showInformationMessage(
+                            'Apply the displayed changes?',
+                            { modal: true },
+                            'Yes',
+                            'No'
+                        );
+                        if (proceed !== 'Yes') {
+                            return { cancelled: true };
+                        }
+                    } else {
+                        // When using the Merge Editor we rely on its built-in "Accept Merge" flow and skip this extra modal.
                     }
-                } else {
-                    // When using the Merge Editor we rely on its built-in “Accept Merge” flow and skip this extra modal.
                 }
             }
 
@@ -406,7 +436,37 @@ Return just the code.`;
         try {
             const config = vscode.workspace.getConfiguration('codeCompanion');
             const confirm = config.get<boolean>('confirmChanges', true);
+            const useMergeEditor = config.get<boolean>('useMergeEditor', false);
+            const inlineAgenticMode = config.get<boolean>('inlineAgenticMode', true);
             const originalContent = await fs.promises.readFile(filePath, 'utf8');
+
+            // If in agentic mode with inline editing enabled, apply changes directly
+            if (inlineAgenticMode) {
+                const doc = await vscode.workspace.openTextDocument(filePath);
+                const edit = new vscode.WorkspaceEdit();
+                const fullRange = new vscode.Range(
+                    doc.positionAt(0),
+                    doc.positionAt(originalContent.length)
+                );
+                edit.replace(doc.uri, fullRange, content);
+                await vscode.workspace.applyEdit(edit);
+                
+                // Show the file so user can see the changes
+                await vscode.window.showTextDocument(doc);
+                
+                if (config.get<boolean>('enableAutoSave', true)) {
+                    await doc.save();
+                }
+                
+                return {
+                    success: true,
+                    filePath,
+                    operation: 'replaced',
+                    originalLength: originalContent.length,
+                    newLength: content.length,
+                    appliedInline: true
+                };
+            }
 
             if (confirm) {
                 const left = vscode.Uri.file(filePath);
@@ -422,37 +482,37 @@ Return just the code.`;
                 edit.insert(rightDoc.uri, new vscode.Position(0, 0), content);
                 await vscode.workspace.applyEdit(edit);
 
-                const useMergeEditor = config.get<boolean>('useMergeEditor', false);
-
-                if (useMergeEditor) {
-                    // Try to open using the Merge Editor (available in VS Code 1.80+).
-                    // There is no official API yet, but opening via the `vscode.openWith` command
-                    // and the built-in `mergeEditor` view type works in current VS Code versions.
-                    // If this fails (older VS Code), we gracefully fall back to the regular two-way diff.
-                    try {
-                        await vscode.commands.executeCommand('vscode.openWith', right, 'mergeEditor', {
-                            override: true
-                        });
-                    } catch {
+                if (!inlineAgenticMode) {
+                    if (useMergeEditor) {
+                        // Try to open using the Merge Editor (available in VS Code 1.80+).
+                        // There is no official API yet, but opening via the `vscode.openWith` command
+                        // and the built-in `mergeEditor` view type works in current VS Code versions.
+                        // If this fails (older VS Code), we gracefully fall back to the regular two-way diff.
+                        try {
+                            await vscode.commands.executeCommand('vscode.openWith', right, 'mergeEditor', {
+                                override: true
+                            });
+                        } catch {
+                            await vscode.commands.executeCommand('vscode.diff', left, right, `Diff: ${path.basename(filePath)}`);
+                        }
+                    } else {
                         await vscode.commands.executeCommand('vscode.diff', left, right, `Diff: ${path.basename(filePath)}`);
                     }
-                } else {
-                    await vscode.commands.executeCommand('vscode.diff', left, right, `Diff: ${path.basename(filePath)}`);
-                }
 
-                if (!useMergeEditor) {
-                    // In diff mode we still ask for explicit confirmation so the user can decide whether to apply.
-                    const proceed = await vscode.window.showInformationMessage(
-                        'Apply the displayed changes?',
-                        { modal: true },
-                        'Yes',
-                        'No'
-                    );
-                    if (proceed !== 'Yes') {
-                        return { cancelled: true };
+                    if (!useMergeEditor) {
+                        // In diff mode we still ask for explicit confirmation so the user can decide whether to apply.
+                        const proceed = await vscode.window.showInformationMessage(
+                            'Apply the displayed changes?',
+                            { modal: true },
+                            'Yes',
+                            'No'
+                        );
+                        if (proceed !== 'Yes') {
+                            return { cancelled: true };
+                        }
+                    } else {
+                        // When using the Merge Editor we rely on its built-in "Accept Merge" flow and skip this extra modal.
                     }
-                } else {
-                    // When using the Merge Editor we rely on its built-in “Accept Merge” flow and skip this extra modal.
                 }
             }
 
