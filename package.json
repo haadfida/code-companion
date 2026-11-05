@@ -222,13 +222,13 @@
     "chalk": "^5.3.0",
     "@octokit/rest": "^20.0.0"
   },
-  "publisher": "codecompanion",
+  "publisher": "haadfida",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/code-companion.git"
+    "url": "https://github.com/haadfida/code-companion"
   },
   "bugs": {
-    "url": "https://github.com/your-username/code-companion/issues"
+    "url": "https://github.com/haadfida/code-companion/issues"
   },
-  "homepage": "https://github.com/your-username/code-companion#readme"
+  "homepage": "https://github.com/haadfida/code-companion#readme"
 } 
