@@ -15,12 +15,19 @@ An autonomous AI pair programmer for VS Code
 • Rich task & status webviews – cancel / retry individual steps.
 
 ## 📦 Installation
-1. Ensure you have **Node.js ≥ 18** and **VS Code ≥ 1.85**.
-2. Install from the VSIX in the repo root:
+1. Ensure you have **VS Code ≥ 1.85**.
+2. Download the `.vsix` from GitHub Releases: <https://github.com/haadfida/code-companion/releases/latest>
+3. Install it:
    ```bash
-   code --install-extension code-companion-0.1.0.vsix
+   code --install-extension code-companion-<version>.vsix
    ```
-3. Reload VS Code and look for the `code-companion` icon in the Activity Bar.
+   (or in VS Code: Extensions view, `...` menu, **Install from VSIX...**)
+4. Reload VS Code and look for the `CodeCompanion` icon in the Activity Bar.
+
+### Demo
+![CodeCompanion demo](docs/demo.gif)
+
+<!-- TODO: record docs/demo.gif by following docs/record-demo.md -->
 
 ## 🚀 Quick Start
 1. Open any workspace.
@@ -40,17 +47,19 @@ Set these in your user or workspace `settings.json`:
 
 ## 🏗 Architecture Overview
 ```mermaid
-graph TD;
-    User["VS Code UI"] -->|Commands & prompts| Manager;
-    Manager --> Planner;
-    Planner --> Executor;
-    Executor -->|Reads| ContextAnalyzer;
-    Executor -->|LLM calls| LLMProvider;
-    LLMProvider --> Ollama & OpenAI;
-    Executor -->|Edits| Workspace;
-    Executor -->|Safety| SafetyValidator;
-    Manager --> UIWebviews;
-    ContextAnalyzer --> Git & RemoteDocs;
+graph TD
+    UI["VS Code UI<br/>(commands, chat and task webviews, status bar)"] -->|prompts| Manager["CodeCompanionManager"]
+    Manager --> Planner["Task Planner"]
+    Planner --> Executor["Code Executor"]
+    Executor -->|reads| Context["Context Analyzer"]
+    Context --> Git["Git / GitHub"]
+    Context --> RemoteDocs["Remote Docs"]
+    Executor -->|LLM calls| LLM["LLM Provider"]
+    LLM --> Ollama["Ollama"]
+    LLM --> OpenAI["OpenAI-compatible"]
+    Executor -->|validates| Safety["Safety Validator"]
+    Executor -->|edits| Workspace["Workspace files"]
+    Manager --> UI
 ```
 
 ## 📂 Project Structure (depth 2)
